@@ -19,6 +19,7 @@ import collections
 import logging
 import logging.handlers
 import math
+import random
 import re
 import threading
 import time
@@ -274,7 +275,6 @@ def _train_model() -> None:
     """Train a fresh IsolationForest model with 9-feature extraction on synthetic + dataset URLs."""
     global _scaler, _model, _model_trained, _model_accuracy
 
-    import random
     random.seed(42)
 
     training_urls: list = []
@@ -356,8 +356,9 @@ def _load_or_train_model() -> None:
             if isinstance(data, tuple) and len(data) == 2:
                 scaler_c, model_c = data
                 # Verify compatibility with our 9-feature extraction
+                # (transform raises ValueError if feature count mismatches)
                 test = np.array(extract_features("/test"), dtype=float).reshape(1, -1)
-                scaler_c.transform(test)
+                _ = scaler_c.transform(test)  # raises if dimensions mismatch
                 _scaler = scaler_c
                 _model = model_c
                 _model_trained = True
@@ -379,9 +380,12 @@ _load_or_train_model()
 # ══════════════════════════════════════════════════════════════
 # G. INPUT VALIDATION
 # ══════════════════════════════════════════════════════════════
+_HTTP_METHODS_PATTERN = r'^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$'
+
+
 class DetectRequest(BaseModel):
     url: str = Field(..., min_length=1, max_length=2048)
-    method: str = Field("GET", pattern=r'^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$')
+    method: str = Field("GET", pattern=_HTTP_METHODS_PATTERN)
     content_length: int = Field(0, ge=0)
     user_agent: str = Field("", max_length=500)
 
