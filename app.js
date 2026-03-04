@@ -10,7 +10,7 @@ if (window.top !== window.self) {
     catch { document.body.innerHTML = ''; window.stop(); }
 }
 const API_BASE = window.location.protocol === 'file:'
-    ? ''
+    ? 'http://127.0.0.1:5000'
     : window.location.origin;
 
 /* ── VIDEO INTRO CONTROLLER ── */
