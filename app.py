@@ -1,26 +1,24 @@
 """
 AI-Powered Anomaly Detection System v3.0
 Security-hardened Flask backend with ML anomaly detection
-+ Datadog APM, Metrics, and Logging Integration
+Windows UTF-8 compatible | Datadog removed
 """
 
 # ══════════════════════════════════════════════════════════════
-# DATADOG APM — MUST BE IMPORTED FIRST (before everything else)
+# WINDOWS UTF-8 FIX — MUST BE ABSOLUTE FIRST
 # ══════════════════════════════════════════════════════════════
-try:
-    from ddtrace import patch_all, tracer
-    from ddtrace.contrib.flask import TraceMiddleware
-    patch_all()
-    DATADOG_APM_ENABLED = True
-except ImportError:
-    DATADOG_APM_ENABLED = False
+import sys
+import io
+import os
+
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 import collections
 import logging
 import logging.handlers
-import os
 import re
-import sys
 import threading
 import time
 from datetime import datetime
@@ -41,23 +39,16 @@ from sklearn.ensemble import IsolationForest
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
-# Datadog Metrics (DogStatsD)
-try:
-    from datadog import initialize as dd_initialize, statsd as dd_statsd
-    DATADOG_METRICS_ENABLED = True
-except ImportError:
-    DATADOG_METRICS_ENABLED = False
-
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 
 # ==================== CONFIGURATION ====================
 class Config:
-    FLASK_ENV     = os.getenv("FLASK_ENV", "production")
-    FLASK_HOST    = os.getenv("FLASK_HOST", "127.0.0.1")
-    FLASK_PORT    = int(os.getenv("FLASK_PORT", 5000))
-    SECRET_KEY    = os.getenv("SECRET_KEY", "change-me-in-production")
+    FLASK_ENV    = os.getenv("FLASK_ENV", "production")
+    FLASK_HOST   = os.getenv("FLASK_HOST", "127.0.0.1")
+    FLASK_PORT   = int(os.getenv("FLASK_PORT", 5000))
+    SECRET_KEY   = os.getenv("SECRET_KEY", "change-me-in-production")
 
     ALLOWED_ORIGINS = [
         o.strip()
@@ -75,7 +66,7 @@ class Config:
     MODEL_DIR  = Path(__file__).parent / "models"
     MODEL_PATH = MODEL_DIR / "model.joblib"
 
-    IF_N_ESTIMATORS = int(os.getenv("ISOLATION_FOREST_N_ESTIMATORS", 200))
+    IF_N_ESTIMATORS  = int(os.getenv("ISOLATION_FOREST_N_ESTIMATORS", 200))
     IF_CONTAMINATION = float(os.getenv("ISOLATION_FOREST_CONTAMINATION", 0.05))
     IF_RANDOM_STATE  = int(os.getenv("ISOLATION_FOREST_RANDOM_STATE", 42))
 
@@ -86,67 +77,7 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
     ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "false").lower() == "true"
-
-    # Serve static files ONLY from the frontend directory
-    FRONTEND_DIR = Path(__file__).parent / "frontend"
-
-    # ── Datadog Configuration ──────────────────────────────────────────────
-    DD_API_KEY    = os.getenv("DD_API_KEY", "")
-    DD_APP_KEY    = os.getenv("DD_APP_KEY", "")
-    DD_SITE       = os.getenv("DD_SITE", "datadoghq.com")
-    DD_SERVICE    = os.getenv("DD_SERVICE", "elwardani")
-    DD_ENV        = os.getenv("DD_ENV", FLASK_ENV)
-    DD_VERSION    = os.getenv("DD_VERSION", "3.0")
-    DD_AGENT_HOST = os.getenv("DD_AGENT_HOST", "127.0.0.1")
-    DD_AGENT_PORT = int(os.getenv("DD_AGENT_PORT", 8125))
-
-
-# ==================== DATADOG INITIALIZER ====================
-def setup_datadog():
-    """Initialize Datadog DogStatsD metrics client."""
-    if not DATADOG_METRICS_ENABLED:
-        return False
-    if not Config.DD_API_KEY:
-        return False
-    try:
-        dd_initialize(
-            api_key=Config.DD_API_KEY,
-            app_key=Config.DD_APP_KEY,
-            statsd_host=Config.DD_AGENT_HOST,
-            statsd_port=Config.DD_AGENT_PORT,
-            host_name="elwardani-server",
-        )
-        return True
-    except Exception as e:
-        print(f"[Datadog] Metrics init failed: {e}")
-        return False
-
-DATADOG_ACTIVE = setup_datadog()
-
-
-def dd_increment(metric, value=1, tags=None):
-    """Safe wrapper — silently skips if Datadog is not available."""
-    if DATADOG_ACTIVE and DATADOG_METRICS_ENABLED:
-        try:
-            dd_statsd.increment(metric, value, tags=tags or [])
-        except Exception:
-            pass
-
-def dd_gauge(metric, value, tags=None):
-    """Safe wrapper for gauge metrics."""
-    if DATADOG_ACTIVE and DATADOG_METRICS_ENABLED:
-        try:
-            dd_statsd.gauge(metric, value, tags=tags or [])
-        except Exception:
-            pass
-
-def dd_histogram(metric, value, tags=None):
-    """Safe wrapper for histogram metrics."""
-    if DATADOG_ACTIVE and DATADOG_METRICS_ENABLED:
-        try:
-            dd_statsd.histogram(metric, value, tags=tags or [])
-        except Exception:
-            pass
+    FRONTEND_DIR  = Path(__file__).parent / "frontend"
 
 
 # ==================== LOGGING ====================
@@ -157,24 +88,39 @@ def setup_logging():
 
     Config.LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    # JSON-structured formatter for Datadog log parsing + correlation
-    json_fmt = (
+    plain_fmt = "%(asctime)s - %(levelname)s - %(message)s"
+    json_fmt  = (
         '{"time":"%(asctime)s","name":"%(name)s","level":"%(levelname)s",'
-        '"message":"%(message)s",'
-        f'"dd.service":"{Config.DD_SERVICE}",'
-        f'"dd.env":"{Config.DD_ENV}",'
-        f'"dd.version":"{Config.DD_VERSION}"}}'
+        '"message":"%(message)s"}'
     )
 
+    # File handler — always UTF-8
     file_handler = logging.handlers.RotatingFileHandler(
-        Config.LOG_FILE, maxBytes=10_485_760, backupCount=5
+        Config.LOG_FILE,
+        maxBytes=10_485_760,
+        backupCount=5,
+        encoding="utf-8",
     )
     file_handler.setFormatter(logging.Formatter(json_fmt))
 
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    )
+    # Stream handler — UTF-8 safe on Windows
+    if sys.platform == "win32":
+        try:
+            safe_stream = open(
+                sys.stdout.fileno(),
+                mode="w",
+                encoding="utf-8",
+                errors="replace",
+                buffering=1,
+                closefd=False,
+            )
+            stream_handler = logging.StreamHandler(stream=safe_stream)
+        except Exception:
+            stream_handler = logging.StreamHandler(sys.stdout)
+    else:
+        stream_handler = logging.StreamHandler(sys.stdout)
+
+    stream_handler.setFormatter(logging.Formatter(plain_fmt))
 
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
@@ -196,20 +142,6 @@ app.config["SECRET_KEY"]         = Config.SECRET_KEY
 
 Compress(app)
 
-# ── Datadog APM Middleware ─────────────────────────────────────────────────
-if DATADOG_APM_ENABLED:
-    try:
-        TraceMiddleware(
-            app,
-            tracer,
-            service=Config.DD_SERVICE,
-            distributed_tracing=True,
-        )
-        logger.info("[Datadog] APM TraceMiddleware attached to Flask.")
-    except Exception as e:
-        logger.warning("[Datadog] APM middleware failed: %s", e)
-
-# Fixed CORS to actually use your environment variables
 CORS(
     app,
     resources={r"/api/*": {"origins": Config.ALLOWED_ORIGINS}},
@@ -229,32 +161,30 @@ limiter = Limiter(
 )
 
 logger.info(
-    "Flask app initialized: env=%s | Datadog APM=%s | Datadog Metrics=%s",
-    Config.FLASK_ENV,
-    DATADOG_APM_ENABLED,
-    DATADOG_ACTIVE,
+    "Flask app initialized | env=%s host=%s port=%d",
+    Config.FLASK_ENV, Config.FLASK_HOST, Config.FLASK_PORT,
 )
 
 
 # ==================== SECURITY HEADERS ====================
 @app.after_request
 def set_security_headers(response):
-    response.headers["Server"]                   = "SecureServer"
-    response.headers["X-Content-Type-Options"]   = "nosniff"
-    response.headers["X-Frame-Options"]          = "DENY"
-    response.headers["X-XSS-Protection"]         = "0"
-    response.headers["Referrer-Policy"]          = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"]       = (
+    response.headers["Server"]                       = "SecureServer"
+    response.headers["X-Content-Type-Options"]       = "nosniff"
+    response.headers["X-Frame-Options"]              = "DENY"
+    response.headers["X-XSS-Protection"]             = "0"
+    response.headers["Referrer-Policy"]              = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"]           = (
         "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
     )
     response.headers["Cross-Origin-Opener-Policy"]   = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
 
-    script_src = (
+    script_src  = (
         "'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net "
         "https://fonts.googleapis.com 'unsafe-inline'"
     )
-    style_src = (
+    style_src   = (
         "'self' https://fonts.googleapis.com https://fonts.gstatic.com 'unsafe-inline'"
     )
     connect_src = (
@@ -275,29 +205,17 @@ def set_security_headers(response):
         f"frame-ancestors 'none'; "
         f"object-src 'none';"
     )
-
-    # ── Datadog: track HTTP response codes ────────────────────────────────
-    dd_increment(
-        "elwardani.http.responses",
-        tags=[
-            f"status_code:{response.status_code}",
-            f"env:{Config.DD_ENV}",
-        ],
-    )
-
     return response
 
 
 # ==================== FRONTEND ROUTES ====================
 @app.route("/")
 def index():
-    """Serve the main dashboard page."""
     return send_from_directory(str(Config.FRONTEND_DIR), "index.html")
 
 
 @app.route("/<path:filename>")
 def static_files(filename):
-    """Serve any static file from the frontend directory."""
     if filename.startswith("api/"):
         return jsonify({"error": "Not found"}), 404
     return send_from_directory(str(Config.FRONTEND_DIR), filename)
@@ -356,19 +274,14 @@ class InputValidator:
         return (m in valid, m if m in valid else "")
 
 
-# ==================== ATTACK PATTERN DETECTOR (Phase 2) ====================
+# ==================== ATTACK PATTERN DETECTOR ====================
 class AttackPatternDetector:
     """
-    Phase 2: Weighted multi-pattern detector that returns a realistic
-    threat probability percentage instead of a binary 0/1 result.
-
-    Each pattern has an individual base_weight. When multiple patterns
-    from the same attack class match, confidence stacks (with diminishing
-    returns) so the output feels natural:  e.g. "87% probability of SQLi".
+    Weighted multi-pattern detector returning realistic threat
+    probability percentage instead of a binary 0/1 result.
     """
 
-    # Each entry: (compiled_regex, base_weight, label_for_logs)
-    WEIGHTED_PATTERNS: dict[str, list[tuple]] = {
+    WEIGHTED_PATTERNS: dict = {
         "SQL_INJECTION": [
             (re.compile(r"\bUNION\b\s+\bSELECT\b",                    re.I), 0.97, "UNION SELECT"),
             (re.compile(r"\bDROP\b\s+\bTABLE\b",                      re.I), 0.97, "DROP TABLE"),
@@ -417,7 +330,7 @@ class AttackPatternDetector:
             (re.compile(r"/bin/(bash|sh|dash|zsh)\b",                  re.I), 0.90, "/bin/bash"),
             (re.compile(r"wget\s+http|curl\s+-[soO]",                  re.I), 0.88, "wget/curl exfil"),
         ],
-        "PATH_TRAVERSAL": [  # LFI / RFI variant
+        "PATH_TRAVERSAL": [
             (re.compile(r"php://filter|php://input",                   re.I), 0.97, "php://wrapper"),
             (re.compile(r"file://",                                    re.I), 0.95, "file://"),
             (re.compile(r"phar://|zip://",                             re.I), 0.96, "phar/zip wrapper"),
@@ -427,18 +340,14 @@ class AttackPatternDetector:
     }
 
     META = {
-        "SQL_INJECTION":    {"description": "SQL Injection Attack",        "riskLevel": "CRITICAL"},
-        "XSS":              {"description": "Cross-Site Scripting (XSS)",  "riskLevel": "CRITICAL"},
-        "DIRECTORY_TRAVERSAL": {"description": "Directory Traversal",      "riskLevel": "HIGH"},
-        "COMMAND_INJECTION":{"description": "Command Injection Attack",    "riskLevel": "CRITICAL"},
-        "PATH_TRAVERSAL":   {"description": "Path/File Inclusion Attack",  "riskLevel": "CRITICAL"},
+        "SQL_INJECTION":       {"description": "SQL Injection Attack",       "riskLevel": "CRITICAL"},
+        "XSS":                 {"description": "Cross-Site Scripting (XSS)", "riskLevel": "CRITICAL"},
+        "DIRECTORY_TRAVERSAL": {"description": "Directory Traversal",        "riskLevel": "HIGH"},
+        "COMMAND_INJECTION":   {"description": "Command Injection Attack",   "riskLevel": "CRITICAL"},
+        "PATH_TRAVERSAL":      {"description": "Path/File Inclusion Attack", "riskLevel": "CRITICAL"},
     }
 
     def detect(self, url: str, content: str, method: str):
-        """
-        Returns (attack_type, confidence_0_to_1, meta_dict, matched_patterns_list)
-        confidence is a float in [0, 1] representing realistic threat probability.
-        """
         try:
             decoded_url     = unquote(url     or "")
             decoded_content = unquote(content or "")
@@ -448,13 +357,13 @@ class AttackPatternDetector:
 
         combined = f"{decoded_url} {decoded_content}"
 
-        best_type: str | None = None
-        best_conf: float      = 0.0
-        best_patterns: list   = []
+        best_type:     str | None = None
+        best_conf:     float      = 0.0
+        best_patterns: list       = []
 
         for attack_type, pattern_list in self.WEIGHTED_PATTERNS.items():
-            matched_weights: list[float] = []
-            matched_labels:  list[str]   = []
+            matched_weights: list = []
+            matched_labels:  list = []
 
             for regex, weight, label in pattern_list:
                 if regex.search(combined):
@@ -464,11 +373,10 @@ class AttackPatternDetector:
             if not matched_weights:
                 continue
 
-            # Combine: highest single match + diminishing bonus per extra match
             matched_weights.sort(reverse=True)
             confidence = matched_weights[0]
             for i, w in enumerate(matched_weights[1:], start=1):
-                confidence += w * (0.05 / i)   # each extra adds a small bonus
+                confidence += w * (0.05 / i)
             confidence = float(min(confidence, 0.99))
 
             if confidence > best_conf:
@@ -498,9 +406,7 @@ class DatasetLoader:
 
             if ext == ".csv":
                 if is_gzip:
-                    logger.info(
-                        "dataset.csv is gzip-compressed — decompressing on the fly"
-                    )
+                    logger.info("dataset.csv is gzip-compressed -- decompressing on the fly")
                     df = pd.read_csv(file_path, compression="gzip")
                 else:
                     df = pd.read_csv(file_path, encoding="utf-8")
@@ -524,7 +430,7 @@ def load_dataset(path):
     return df if df is not None else pd.DataFrame()
 
 
-# ==================== DETECTOR ====================
+# ==================== ANOMALY DETECTOR ====================
 class AnomalyDetector:
     def __init__(self):
         self._lock              = threading.Lock()
@@ -532,7 +438,7 @@ class AnomalyDetector:
         self.anomalies_detected = 0
         self.normal_requests    = 0
         self.model_accuracy     = 0.0
-        self.request_history    = collections.deque(maxlen=1000)  # Phase 3: O(1) append/trim
+        self.request_history    = collections.deque(maxlen=1000)
         self.attack_detector    = AttackPatternDetector()
         self.isolation_forest   = None
         self.scaler             = None
@@ -607,30 +513,19 @@ class AnomalyDetector:
 
             preds = self.isolation_forest.predict(X_scaled)
 
-            # Phase 3: use labeled data for real accuracy instead of counting normal ratio
             if "is_anomaly" in df.columns:
                 y_true = df["is_anomaly"].values
-                y_pred = np.where(preds == -1, 1, 0)  # -1=anomaly→1, 1=normal→0
+                y_pred = np.where(preds == -1, 1, 0)
                 self.model_accuracy = float(np.mean(y_pred == y_true))
             else:
                 normal_count = int(np.sum(preds == 1))
                 self.model_accuracy = (normal_count / len(preds)) if len(preds) else 0.0
+
             self._save_model()
-
-            # ── Datadog: report model accuracy after training ─────────────
-            dd_gauge(
-                "elwardani.model.accuracy",
-                self.model_accuracy,
-                tags=[f"env:{Config.DD_ENV}", f"service:{Config.DD_SERVICE}"],
-            )
-            dd_gauge(
-                "elwardani.model.training_samples",
-                len(df),
-                tags=[f"env:{Config.DD_ENV}"],
-            )
-
             logger.info(
-                "Trained ML model on %d features.", len(self.feature_columns)
+                "Model trained | features=%d accuracy=%.4f",
+                len(self.feature_columns),
+                self.model_accuracy,
             )
         except Exception as e:
             logger.error("Training failed: %s", e, exc_info=True)
@@ -645,9 +540,7 @@ class AnomalyDetector:
             len(content_str),
             sum(not c.isalnum() for c in url_str),
             sum(c.isdigit() for c in url_str),
-            {"GET": 1, "POST": 2, "PUT": 3, "DELETE": 4}.get(
-                method.upper(), 0
-            ),
+            {"GET": 1, "POST": 2, "PUT": 3, "DELETE": 4}.get(method.upper(), 0),
         ]
 
     def predict(self, method, url, content=""):
@@ -659,7 +552,6 @@ class AnomalyDetector:
             matched_patterns = []
             model_used       = "Rule-based"
 
-            # Phase 2: weighted pattern detection
             detected, pattern_conf, _, matched_patterns = self.attack_detector.detect(
                 url, content, method
             )
@@ -673,17 +565,14 @@ class AnomalyDetector:
             if not is_anomaly and self.model_trained:
                 if len(extracted) == len(self.feature_columns):
                     try:
-                        X_df  = pd.DataFrame(
-                            [extracted], columns=self.feature_columns
-                        )
-                        X_i   = self.imputer.transform(X_df)
-                        X_s   = self.scaler.transform(X_i)
-                        pred  = self.isolation_forest.predict(X_s)[0]
+                        X_df = pd.DataFrame([extracted], columns=self.feature_columns)
+                        X_i  = self.imputer.transform(X_df)
+                        X_s  = self.scaler.transform(X_i)
+                        pred = self.isolation_forest.predict(X_s)[0]
                         model_used = "ML-based"
 
                         if pred == -1:
                             is_anomaly  = True
-                            # Phase 3 fix: proper score normalization
                             raw_score   = float(self.isolation_forest.score_samples(X_s)[0])
                             confidence  = float(np.clip((0.5 - raw_score) / 1.0, 0.05, 0.99))
                             attack_type = "BEHAVIORAL_ANOMALY"
@@ -691,19 +580,17 @@ class AnomalyDetector:
                         logger.warning("ML prediction error: %s", e)
                 else:
                     logger.warning(
-                        "Feature mismatch: Model expects %d, got %d",
+                        "Feature mismatch: expected=%d got=%d",
                         len(self.feature_columns),
                         len(extracted),
                     )
 
-            # Phase 2: human-readable threat probability string
             threat_probability = (
                 f"{int(round(confidence * 100))}% probability of {attack_type}"
                 if is_anomaly and attack_type
-                else "0% — request appears clean"
+                else "0% -- request appears clean"
             )
 
-            # Performance Fix: Only acquire lock briefly
             with self._lock:
                 self.total_requests += 1
                 if is_anomaly:
@@ -721,63 +608,29 @@ class AnomalyDetector:
                     "method":             method,
                     "timestamp":          datetime.now().isoformat(),
                     "model_type":         model_used,
+                    "latency_ms":         round((time.time() - start_time) * 1000, 2),
                 }
                 self.request_history.append(result)
-                if len(self.request_history) > 1000:
-                    self.request_history.pop(0)
-
-            # ── Datadog Custom Metrics ─────────────────────────────────────
-            elapsed_ms = (time.time() - start_time) * 1000
-
-            base_tags = [
-                f"method:{method}",
-                f"model:{model_used}",
-                f"env:{Config.DD_ENV}",
-                f"service:{Config.DD_SERVICE}",
-            ]
-
-            dd_increment("elwardani.requests.total", tags=base_tags)
-            dd_histogram("elwardani.prediction.latency_ms", elapsed_ms, tags=base_tags)
 
             if is_anomaly:
-                threat_tags = base_tags + [f"attack_type:{attack_type}"]
-                dd_increment("elwardani.threats.detected",    tags=threat_tags)
-                dd_gauge("elwardani.threats.confidence", confidence, tags=threat_tags)
                 logger.warning(
-                    "THREAT DETECTED | attack=%s confidence=%.3f method=%s url=%s",
+                    "THREAT | attack=%s confidence=%.3f method=%s url=%s",
                     attack_type, confidence, method, url[:120],
                 )
-            else:
-                dd_increment("elwardani.requests.normal", tags=base_tags)
-
-            # Live gauge: current anomaly rate
-            with self._lock:
-                total = self.total_requests
-                anoms = self.anomalies_detected
-            if total > 0:
-                dd_gauge(
-                    "elwardani.threats.rate_pct",
-                    round((anoms / total) * 100, 2),
-                    tags=[f"env:{Config.DD_ENV}"],
-                )
-            # ──────────────────────────────────────────────────────────────
 
             return result
 
         except Exception as e:
             logger.error("Prediction error: %s", e, exc_info=True)
-            dd_increment(
-                "elwardani.errors.prediction",
-                tags=[f"env:{Config.DD_ENV}"],
-            )
             return {
                 "prediction_code": 0,
                 "confidence":      0.0,
-                "attack_type":     "None",
+                "attack_type":     None,
                 "url":             url,
                 "method":          method,
                 "timestamp":       datetime.now().isoformat(),
                 "model_type":      "Error",
+                "latency_ms":      0,
             }
 
 
@@ -787,28 +640,16 @@ detector = AnomalyDetector()
 # ==================== ERROR HANDLERS ====================
 @app.errorhandler(404)
 def not_found(_):
-    dd_increment(
-        "elwardani.http.errors",
-        tags=["status_code:404", f"env:{Config.DD_ENV}"],
-    )
     return jsonify({"error": "Endpoint not found", "path": request.path}), 404
 
 
 @app.errorhandler(429)
 def ratelimited(_):
-    dd_increment(
-        "elwardani.http.rate_limited",
-        tags=[f"env:{Config.DD_ENV}"],
-    )
     return jsonify({"error": "Too many requests. Rate limit exceeded."}), 429
 
 
 @app.errorhandler(500)
 def internal(_):
-    dd_increment(
-        "elwardani.http.errors",
-        tags=["status_code:500", f"env:{Config.DD_ENV}"],
-    )
     return jsonify({"error": "Internal server error"}), 500
 
 
@@ -822,10 +663,6 @@ def detect_anomaly():
     try:
         body = PredictionRequest(**(request.get_json(silent=True) or {}))
     except ValidationError as e:
-        dd_increment(
-            "elwardani.api.validation_errors",
-            tags=["endpoint:detect", f"env:{Config.DD_ENV}"],
-        )
         return jsonify({"error": "Validation Error", "details": e.errors()}), 400
 
     ok_m, method = InputValidator.validate_method(body.Method)
@@ -848,30 +685,24 @@ def detect_anomaly():
 def get_stats():
     if request.method == "OPTIONS":
         return "", 204
+
     with detector._lock:
-        total    = detector.total_requests
+        total     = detector.total_requests
         anomalies = detector.anomalies_detected
-        normal   = detector.normal_requests
-        trained  = detector.model_trained
-        accuracy = detector.model_accuracy
+        normal    = detector.normal_requests
+        trained   = detector.model_trained
+        accuracy  = detector.model_accuracy
 
     rate = (anomalies / total * 100) if total > 0 else 0
 
-    # ── Datadog: push live stats on every /stats poll ─────────────────────
-    dd_gauge("elwardani.stats.total_requests",     total,    tags=[f"env:{Config.DD_ENV}"])
-    dd_gauge("elwardani.stats.anomalies_detected", anomalies, tags=[f"env:{Config.DD_ENV}"])
-    dd_gauge("elwardani.stats.normal_requests",    normal,   tags=[f"env:{Config.DD_ENV}"])
-    dd_gauge("elwardani.stats.detection_rate_pct", round(rate, 2), tags=[f"env:{Config.DD_ENV}"])
-    # ──────────────────────────────────────────────────────────────────────
-
     return jsonify({
-        "total_requests":    total,
+        "total_requests":     total,
         "anomalies_detected": anomalies,
-        "normal_requests":   normal,
-        "detection_rate":    round(rate, 2),
-        "model_trained":     trained,
-        "model_accuracy":    round(accuracy, 4),
-        "timestamp":         datetime.now().isoformat(),
+        "normal_requests":    normal,
+        "detection_rate":     round(rate, 2),
+        "model_trained":      trained,
+        "model_accuracy":     round(accuracy, 4),
+        "timestamp":          datetime.now().isoformat(),
     }), 200
 
 
@@ -879,12 +710,15 @@ def get_stats():
 def get_history():
     if request.method == "OPTIONS":
         return "", 204
+
     limit  = min(request.args.get("limit",  50, type=int), 500)
     offset = max(request.args.get("offset",  0, type=int), 0)
+
     with detector._lock:
-        history_list  = list(detector.request_history)  # Phase 3: deque→list
+        history_list  = list(detector.request_history)
         history_slice = history_list[offset: offset + limit]
         total         = len(history_list)
+
     return jsonify({
         "history": history_slice,
         "total":   total,
@@ -893,40 +727,37 @@ def get_history():
     }), 200
 
 
-# ==================== DATADOG HEALTH ENDPOINT ====================
-@app.route("/api/v1/datadog/status", methods=["GET"])
-def datadog_status():
-    """Returns current Datadog integration status — useful for debugging."""
+@app.route("/api/v1/health", methods=["GET"])
+def health():
+    """Simple health-check endpoint."""
     return jsonify({
-        "apm_enabled":     DATADOG_APM_ENABLED,
-        "metrics_enabled": DATADOG_ACTIVE,
-        "service":         Config.DD_SERVICE,
-        "env":             Config.DD_ENV,
-        "version":         Config.DD_VERSION,
-        "agent_host":      Config.DD_AGENT_HOST,
-        "agent_port":      Config.DD_AGENT_PORT,
-        "site":            Config.DD_SITE,
+        "status":        "ok",
+        "model_trained": detector.model_trained,
+        "version":       "3.0",
+        "timestamp":     datetime.now().isoformat(),
     }), 200
 
 
 # ==================== MAIN ====================
 if __name__ == "__main__":
-    logger.info("=" * 70)
+    sep  = "=" * 70
+    dash = "-" * 70
+
+    logger.info(sep)
     logger.info("AI Anomaly Detection System v3.0")
     logger.info("Server   : http://%s:%d", Config.FLASK_HOST, Config.FLASK_PORT)
-    logger.info("Frontend : %s/index.html", Config.FRONTEND_DIR)
+    logger.info("Frontend : %s", Config.FRONTEND_DIR / "index.html")
     logger.info("Dataset  : %s", Config.DATASET_PATH)
     logger.info(
         "ML Model : %s",
         "trained" if detector.model_trained
-        else "NOT trained — run generate_dataset.py first",
+        else "NOT trained -- run: python generate_dataset.py",
     )
-    logger.info("─" * 70)
-    logger.info("Datadog APM     : %s", "ENABLED" if DATADOG_APM_ENABLED else "disabled (pip install ddtrace)")
-    logger.info("Datadog Metrics : %s", "ENABLED" if DATADOG_ACTIVE     else "disabled (set DD_API_KEY in .env)")
-    logger.info("Datadog Service : %s | Env: %s | Version: %s",
-                Config.DD_SERVICE, Config.DD_ENV, Config.DD_VERSION)
-    logger.info("=" * 70)
+    logger.info(dash)
+    logger.info("Datadog  : disabled (removed)")
+    logger.info("Env      : %s", Config.FLASK_ENV)
+    logger.info("HTTPS    : %s", Config.ENFORCE_HTTPS)
+    logger.info(sep)
 
     try:
         if Config.FLASK_ENV == "development":
@@ -939,9 +770,11 @@ if __name__ == "__main__":
         else:
             try:
                 from waitress import serve
+                logger.info("Starting with Waitress (production)...")
                 serve(app, host=Config.FLASK_HOST, port=Config.FLASK_PORT, threads=4)
             except ImportError:
+                logger.warning("Waitress not found -- falling back to Flask dev server")
                 app.run(debug=False, host=Config.FLASK_HOST, port=Config.FLASK_PORT)
     except Exception as e:
-        logger.critical("Failed to start: %s", e, exc_info=True)
+        logger.critical("Failed to start server: %s", e, exc_info=True)
         sys.exit(1)
