@@ -34,7 +34,7 @@ from flask_compress import Compress
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import AliasChoices, BaseModel, Field, ValidationError
 from sklearn.ensemble import IsolationForest
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
@@ -175,35 +175,21 @@ def set_security_headers(response):
     response.headers["X-XSS-Protection"]             = "0"
     response.headers["Referrer-Policy"]              = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"]           = (
-        "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+        "geolocation=(), microphone=(), camera=(), payment=()"
     )
     response.headers["Cross-Origin-Opener-Policy"]   = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
-
-    script_src  = (
-        "'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net "
-        "https://fonts.googleapis.com 'unsafe-inline'"
-    )
-    style_src   = (
-        "'self' https://fonts.googleapis.com https://fonts.gstatic.com 'unsafe-inline'"
-    )
-    connect_src = (
-        "'self' http://127.0.0.1:5000 http://localhost:5000 "
-        "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
-    )
-
-    response.headers["Content-Security-Policy"] = (
-        f"default-src 'self'; "
-        f"script-src {script_src}; "
-        f"style-src {style_src}; "
-        f"font-src 'self' https://fonts.gstatic.com; "
-        f"img-src 'self' data: blob:; "
-        f"connect-src {connect_src}; "
-        f"media-src 'self' data:; "
-        f"base-uri 'self'; "
-        f"form-action 'self'; "
-        f"frame-ancestors 'none'; "
-        f"object-src 'none';"
+    response.headers["Content-Security-Policy"]      = (
+        "default-src 'self'; "
+        "script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; "
+        "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; "
+        "media-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'none';"
     )
     return response
 
@@ -223,8 +209,11 @@ def static_files(filename):
 
 # ==================== VALIDATION MODELS ====================
 class PredictionRequest(BaseModel):
-    Method:  str = Field(..., min_length=1, max_length=10)
-    URL:     str = Field(..., min_length=1, max_length=Config.MAX_URL_LENGTH)
+    model_config = {"populate_by_name": True}
+    method:  str = Field(..., min_length=1, max_length=10,
+                         validation_alias=AliasChoices('method', 'Method'))
+    url:     str = Field(..., min_length=1, max_length=Config.MAX_URL_LENGTH,
+                         validation_alias=AliasChoices('url', 'URL'))
     content: str = Field(default="", max_length=Config.MAX_CONTENT_LENGTH)
 
 
@@ -600,6 +589,8 @@ class AnomalyDetector:
 
                 result = {
                     "prediction_code":    1 if is_anomaly else 0,
+                    "is_anomaly":         is_anomaly,
+                    "score":              round(confidence, 3),
                     "confidence":         round(confidence, 3),
                     "attack_type":        attack_type,
                     "threat_probability": threat_probability,
@@ -624,6 +615,8 @@ class AnomalyDetector:
             logger.error("Prediction error: %s", e, exc_info=True)
             return {
                 "prediction_code": 0,
+                "is_anomaly":      False,
+                "score":           0.0,
                 "confidence":      0.0,
                 "attack_type":     None,
                 "url":             url,
@@ -635,6 +628,7 @@ class AnomalyDetector:
 
 
 detector = AnomalyDetector()
+_start_time = datetime.now()
 
 
 # ==================== ERROR HANDLERS ====================
@@ -665,11 +659,11 @@ def detect_anomaly():
     except ValidationError as e:
         return jsonify({"error": "Validation Error", "details": e.errors()}), 400
 
-    ok_m, method = InputValidator.validate_method(body.Method)
+    ok_m, method = InputValidator.validate_method(body.method)
     if not ok_m:
         return jsonify({"error": "Invalid HTTP method"}), 400
 
-    ok_u, url = InputValidator.validate_url(body.URL)
+    ok_u, url = InputValidator.validate_url(body.url)
     if not ok_u:
         return jsonify({"error": "Invalid URL format"}), 400
 
@@ -693,7 +687,8 @@ def get_stats():
         trained   = detector.model_trained
         accuracy  = detector.model_accuracy
 
-    rate = (anomalies / total * 100) if total > 0 else 0
+    rate   = (anomalies / total * 100) if total > 0 else 0
+    uptime = round((datetime.now() - _start_time).total_seconds(), 1)
 
     return jsonify({
         "total_requests":     total,
@@ -702,6 +697,8 @@ def get_stats():
         "detection_rate":     round(rate, 2),
         "model_trained":      trained,
         "model_accuracy":     round(accuracy, 4),
+        "model_name":         "IsolationForest" if trained else "Not trained",
+        "uptime":             uptime,
         "timestamp":          datetime.now().isoformat(),
     }), 200
 
