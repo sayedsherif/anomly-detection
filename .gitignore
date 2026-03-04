@@ -21,8 +21,10 @@ logs/
 # ML models (generated artifacts)
 models/
 
-# Environment
+# Environment — NEVER commit secrets
+.env
 .env.local
+.env.*.local
 
 # OS
 .DS_Store
