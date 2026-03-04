@@ -1,0 +1,668 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="ELWARDANI — Premium Enterprise AI Anomaly Detection" />
+    <meta name="theme-color" content="#05070d" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=()" />
+    <meta name="format-detection" content="telephone=no,email=no,address=no" />
+    <meta name="robots" content="noindex,nofollow" />
+    <!-- ✦ Content Security Policy ✦ -->
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline';
+                 style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+                 font-src 'self' https://fonts.gstatic.com;
+                 img-src 'self' data: blob:;
+                 media-src 'self' data: blob:;
+                 connect-src 'self' http://127.0.0.1:5000;
+                 frame-ancestors 'none';
+                 base-uri 'self';
+                 form-action 'none';" />
+    <link rel="icon" href="data:,">
+    <title>ELWARDANI — Premium Threat Intelligence</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=Exo+2:wght@300;400;700;900&display=swap" rel="stylesheet" />
+
+    <!-- Libraries with SRI for extra security -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mousetrap@1.6.5/mousetrap.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     ██╗   ██╗██╗██████╗ ███████╗ ██████╗     ██╗███╗  ██╗████████╗██████╗  ██████╗
+     ██║   ██║██║██╔══██╗██╔════╝██╔═══██╗    ██║████╗ ██║╚══██╔══╝██╔══██╗██╔═══██╗
+     ██║   ██║██║██║  ██║█████╗  ██║   ██║    ██║██╔██╗██║   ██║   ██████╔╝██║   ██║
+     ╚██╗ ██╔╝██║██║  ██║██╔══╝  ██║   ██║    ██║██║╚████║   ██║   ██╔══██╗██║   ██║
+      ╚████╔╝ ██║██████╔╝███████╗╚██████╔╝    ██║██║ ╚███║   ██║   ██║  ██║╚██████╔╝
+       ╚═══╝  ╚═╝╚═════╝ ╚══════╝ ╚═════╝     ╚═╝╚═╝  ╚══╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+     CINEMATIC VIDEO OPENING
+══════════════════════════════════════════════════════════ -->
+<div id="videoIntro" role="presentation" aria-hidden="true">
+    <!-- Background video -->
+    <video id="introVideo" autoplay muted playsinline preload="auto" loop>
+        <source src="87273-601148577_medium.mp4" type="video/mp4" />
+    </video>
+
+    <!-- Visual overlay layers (stacked) -->
+    <div class="vi-dark-overlay"></div>
+    <div class="vi-scan-lines"></div>
+    <div class="vi-grid-overlay"></div>
+    <div class="vi-vignette"></div>
+    <div class="vi-chromatic-top"></div>
+    <div class="vi-chromatic-bottom"></div>
+
+    <!-- Animated glitch bars -->
+    <div class="vi-glitch-bar" style="top:22%;animation-delay:0s;"></div>
+    <div class="vi-glitch-bar" style="top:55%;animation-delay:1.3s;"></div>
+    <div class="vi-glitch-bar" style="top:78%;animation-delay:2.7s;"></div>
+
+    <!-- Cinematic letterbox -->
+    <div class="vi-letterbox vi-lb-top"></div>
+    <div class="vi-letterbox vi-lb-bottom"></div>
+
+    <!-- Corner brackets -->
+    <div class="vi-corner vi-corner-tl"></div>
+    <div class="vi-corner vi-corner-tr"></div>
+    <div class="vi-corner vi-corner-bl"></div>
+    <div class="vi-corner vi-corner-br"></div>
+
+    <!-- Central HUD -->
+    <div class="vi-hud">
+        <!-- Pulsing radar rings -->
+        <div class="vi-ring vi-ring-1"></div>
+        <div class="vi-ring vi-ring-2"></div>
+        <div class="vi-ring vi-ring-3"></div>
+
+        <!-- Shield + Eye Logo -->
+        <div class="vi-shield-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 90">
+                <defs>
+                    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#f4d79a"/>
+                        <stop offset="100%" stop-color="#d6b36a"/>
+                    </linearGradient>
+                    <filter id="shieldGlow">
+                        <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+                <!-- Outer shield -->
+                <path d="M40 3 L72 17 L72 47 Q72 74 40 88 Q8 74 8 47 L8 17 Z"
+                      fill="none" stroke="url(#shieldGrad)" stroke-width="2.2"
+                      stroke-linejoin="round" filter="url(#shieldGlow)"/>
+                <!-- Inner shield -->
+                <path d="M40 11 L64 22 L64 47 Q64 68 40 80 Q16 68 16 47 L16 22 Z"
+                      fill="rgba(214,179,106,0.07)" stroke="rgba(214,179,106,0.35)" stroke-width="1"/>
+                <!-- Eye outer -->
+                <ellipse cx="40" cy="48" rx="16" ry="10" fill="none" stroke="url(#shieldGrad)" stroke-width="1.8"/>
+                <!-- Iris -->
+                <circle cx="40" cy="48" r="6" fill="none" stroke="url(#shieldGrad)" stroke-width="1.8"/>
+                <!-- Pupil -->
+                <circle cx="40" cy="48" r="2.8" fill="#d6b36a"/>
+                <!-- Scan lines through eye -->
+                <line x1="24" y1="48" x2="56" y2="48" stroke="rgba(214,179,106,0.3)" stroke-width="0.8"/>
+                <!-- Top detail -->
+                <line x1="40" y1="22" x2="40" y2="33" stroke="rgba(214,179,106,0.55)" stroke-width="1"/>
+                <circle cx="40" cy="36" r="2.5" fill="none" stroke="rgba(214,179,106,0.7)" stroke-width="1.2"/>
+                <!-- Side details -->
+                <line x1="18" y1="32" x2="22" y2="32" stroke="rgba(214,179,106,0.4)" stroke-width="1"/>
+                <line x1="58" y1="32" x2="62" y2="32" stroke="rgba(214,179,106,0.4)" stroke-width="1"/>
+            </svg>
+        </div>
+
+        <!-- Brand text -->
+        <div class="vi-brand">
+            <div class="vi-brand-name">ELWARDANI</div>
+            <div class="vi-brand-line"></div>
+            <div class="vi-brand-tagline">PREMIUM THREAT INTELLIGENCE SYSTEM</div>
+            <div class="vi-brand-sub">AI-POWERED ANOMALY DETECTION · v3.0</div>
+        </div>
+
+        <!-- Live status row -->
+        <div class="vi-status-row">
+            <div class="vi-status-chip">
+                <span class="vi-sdot green"></span>NEURAL ENGINE ONLINE
+            </div>
+            <div class="vi-status-div">◆</div>
+            <div class="vi-status-chip">
+                <span class="vi-sdot gold"></span>THREAT SCAN ACTIVE
+            </div>
+            <div class="vi-status-div">◆</div>
+            <div class="vi-status-chip">
+                <span class="vi-sdot blue"></span>AES-256 ENCRYPTED
+            </div>
+        </div>
+
+        <!-- Loading bar -->
+        <div class="vi-progress-wrap">
+            <div class="vi-progress-bar" id="viProgressBar"></div>
+        </div>
+        <div class="vi-progress-label" id="viProgressLabel">ESTABLISHING SECURE CONNECTION...</div>
+    </div>
+
+    <!-- Skip / Enter button -->
+    <button class="vi-enter-btn" id="viEnterBtn" aria-label="Enter system">
+        <span>ENTER SYSTEM</span>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" width="16" height="16">
+            <path d="M5 10h10M11 6l4 4-4 4"/>
+        </svg>
+    </button>
+
+    <!-- Bottom data ticker -->
+    <div class="vi-ticker" aria-hidden="true">
+        <div class="vi-ticker-track">
+            <div class="vi-ticker-inner">
+                <span>ML ACTIVE</span><span class="vts">▸</span>
+                <span>ISOLATION FOREST</span><span class="vts">▸</span>
+                <span>XSS GUARD ENABLED</span><span class="vts">▸</span>
+                <span>SQL INJECTION MONITOR</span><span class="vts">▸</span>
+                <span>CSRF TOKEN VALID</span><span class="vts">▸</span>
+                <span>AES-256 ENCRYPTED</span><span class="vts">▸</span>
+                <span>RATE LIMITING ACTIVE</span><span class="vts">▸</span>
+                <span>CMD INJECTION FILTER</span><span class="vts">▸</span>
+                <span>DIR TRAVERSAL BLOCKED</span><span class="vts">▸</span>
+                <span>CSP ENFORCED</span><span class="vts">▸</span>
+                <span>CLICKJACK DENIED</span><span class="vts">▸</span>
+                <span>INPUT SANITIZED</span><span class="vts">▸</span>
+                <span>SESSION SECURED</span><span class="vts">▸</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SPLASH SCREEN
+════════════════════════════════════════ -->
+<div id="splashScreen" role="status" aria-label="Loading" aria-live="polite">
+    <div class="splash-hex-grid"></div>
+    <canvas id="splashParticles" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+    <div class="splash-corners"><span></span><span></span><span></span><span></span></div>
+
+    <!-- Radar animation -->
+    <div class="splash-radar" aria-hidden="true">
+        <div class="sr-ring r1"></div>
+        <div class="sr-ring r2"></div>
+        <div class="sr-ring r3"></div>
+        <div class="sr-sweep"></div>
+    </div>
+
+    <div class="splash-logo" style="position:relative;z-index:1;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:110px;height:110px">
+            <rect x="5" y="8" width="90" height="62" rx="7" ry="7" fill="#1a4a9e" stroke="#2060cc" stroke-width="1.5"/>
+            <rect x="10" y="13" width="80" height="52" rx="4" fill="#0d3580"/>
+            <circle cx="18" cy="20" r="3" fill="white" opacity="0.9"/>
+            <circle cx="27" cy="20" r="3" fill="white" opacity="0.9"/>
+            <circle cx="36" cy="20" r="3" fill="white" opacity="0.9"/>
+            <rect x="55" y="18" width="26" height="3" rx="1.5" fill="white" opacity="0.7"/>
+            <rect x="55" y="23" width="20" height="3" rx="1.5" fill="white" opacity="0.5"/>
+            <ellipse cx="34" cy="44" rx="15" ry="16" fill="#1a4a9e" stroke="white" stroke-width="2"/>
+            <rect x="21" y="53" width="26" height="9" rx="2" fill="#1a4a9e" stroke="white" stroke-width="2"/>
+            <ellipse cx="28" cy="43" rx="5" ry="6" fill="white"/>
+            <ellipse cx="40" cy="43" rx="5" ry="6" fill="white"/>
+            <ellipse cx="28" cy="43" rx="3" ry="4" fill="#0d3580"/>
+            <ellipse cx="40" cy="43" rx="3" ry="4" fill="#0d3580"/>
+            <polygon points="34,48 31,53 37,53" fill="white"/>
+            <rect x="23" y="55" width="4" height="6" rx="1" fill="#0d3580"/>
+            <rect x="30" y="55" width="4" height="6" rx="1" fill="#0d3580"/>
+            <rect x="37" y="55" width="4" height="6" rx="1" fill="#0d3580"/>
+            <rect x="44" y="55" width="3" height="6" rx="1" fill="#0d3580"/>
+            <polygon points="70,28 86,58 54,58" fill="#1a4a9e" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+            <rect x="68.5" y="36" width="3" height="13" rx="1.5" fill="white"/>
+            <circle cx="70" cy="54" r="2" fill="white"/>
+            <rect x="43" y="70" width="14" height="8" rx="2" fill="#1a4a9e" stroke="#2060cc" stroke-width="1.5"/>
+            <rect x="34" y="77" width="32" height="6" rx="3" fill="#1a4a9e" stroke="#2060cc" stroke-width="1.5"/>
+        </svg>
+    </div>
+
+    <div class="splash-title" style="position:relative;z-index:1;">ELWARDANI</div>
+    <div class="splash-sub" style="position:relative;z-index:1;">Premium Anomaly Detection System v3.0</div>
+
+    <!-- Security checklist readout -->
+    <div class="splash-checklist" id="splashChecklist" style="position:relative;z-index:1;">
+        <div class="scl-item" id="scl0"><span class="scl-dot"></span><span class="scl-text">Loading security modules</span><span class="scl-val">...</span></div>
+        <div class="scl-item" id="scl1"><span class="scl-dot"></span><span class="scl-text">Initializing ML engine</span><span class="scl-val">...</span></div>
+        <div class="scl-item" id="scl2"><span class="scl-dot"></span><span class="scl-text">Connecting to backend</span><span class="scl-val">...</span></div>
+        <div class="scl-item" id="scl3"><span class="scl-dot"></span><span class="scl-text">Loading threat signatures</span><span class="scl-val">...</span></div>
+        <div class="scl-item" id="scl4"><span class="scl-dot"></span><span class="scl-text">Establishing session</span><span class="scl-val">...</span></div>
+    </div>
+
+    <div class="splash-bar-wrap" style="position:relative;z-index:1;"><div class="splash-bar" id="splashBar"></div></div>
+    <div class="splash-status" id="splashStatus" style="position:relative;z-index:1;">Initializing...</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     AUDIO
+══════════════════════════════════════════ -->
+<audio id="alertChime" preload="auto" style="display:none">
+    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" type="audio/wav" />
+</audio>
+
+<!-- ══════════════════════════════════════════
+     TOPBAR
+══════════════════════════════════════════ -->
+<nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-brand">
+        <div class="brand-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" style="width:36px;height:36px;filter:drop-shadow(0 0 6px rgba(214,179,106,0.5))">
+                <path d="M4 4 L22 4 L22 12 L28 12 L28 36 L4 36 Z" fill="#1a223d" stroke="#d6b36a" stroke-width="1.2"/>
+                <path d="M22 4 L28 12 L22 12 Z" fill="#0a0e18" stroke="#d6b36a" stroke-width="1"/>
+                <circle cx="9" cy="13" r="2" fill="none" stroke="#d6b36a" stroke-width="1.2"/>
+                <line x1="11" y1="13" x2="16" y2="13" stroke="#d6b36a" stroke-width="1"/>
+                <circle cx="9" cy="19" r="2" fill="none" stroke="#d6b36a" stroke-width="1.2"/>
+                <line x1="9" y1="15" x2="9" y2="17" stroke="#d6b36a" stroke-width="1"/>
+                <circle cx="9" cy="25" r="2" fill="none" stroke="#d6b36a" stroke-width="1.2"/>
+                <line x1="9" y1="21" x2="9" y2="23" stroke="#d6b36a" stroke-width="1"/>
+                <line x1="11" y1="25" x2="14" y2="25" stroke="#d6b36a" stroke-width="1"/>
+                <circle cx="9" cy="31" r="2" fill="none" stroke="#d6b36a" stroke-width="1.2"/>
+                <line x1="9" y1="27" x2="9" y2="29" stroke="#d6b36a" stroke-width="1"/>
+                <line x1="11" y1="31" x2="14" y2="31" stroke="#d6b36a" stroke-width="1"/>
+                <circle cx="16" cy="19" r="2" fill="none" stroke="#d6b36a" stroke-width="1"/>
+                <line x1="16" y1="13" x2="16" y2="17" stroke="#d6b36a" stroke-width="1"/>
+                <circle cx="28" cy="28" r="9" fill="#101625" stroke="#d6b36a" stroke-width="1.5"/>
+                <circle cx="28" cy="28" r="6" fill="#0a0e18" stroke="#d6b36a" stroke-width="1"/>
+                <ellipse cx="28" cy="27.5" rx="3" ry="3.5" fill="none" stroke="#ff4d5f" stroke-width="1.3"/>
+                <circle cx="28" cy="23.5" r="1.5" fill="none" stroke="#ff4d5f" stroke-width="1.2"/>
+                <line x1="25" y1="26" x2="22.5" y2="24.5" stroke="#ff4d5f" stroke-width="1"/>
+                <line x1="25" y1="28" x2="22.5" y2="28"   stroke="#ff4d5f" stroke-width="1"/>
+                <line x1="31" y1="26" x2="33.5" y2="24.5" stroke="#ff4d5f" stroke-width="1"/>
+                <line x1="31" y1="28" x2="33.5" y2="28"   stroke="#ff4d5f" stroke-width="1"/>
+                <line x1="34.5" y1="34.5" x2="38" y2="38" stroke="#d6b36a" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="brand-text">
+            <div class="brand-name">ELWARDANI</div>
+            <div class="brand-sub">PREMIUM ANOMALY DETECTION SYSTEM v3.0</div>
+        </div>
+    </div>
+
+    <div class="topbar-center">
+        <div class="threat-badge">
+            <span class="d"></span>
+            <span id="threatLabel">MONITORING</span>
+        </div>
+    </div>
+
+    <div class="topbar-actions">
+        <button class="btn btn-primary" id="pauseBtn" title="Pause/Resume (Ctrl+P)">
+            <svg class="btn-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>
+            PAUSE
+        </button>
+        <button class="btn" id="recordBtn" title="Record session">
+            <svg class="btn-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5"/></svg>
+            REC
+        </button>
+        <button class="btn" id="exportBtn" title="Export CSV (Ctrl+E)">
+            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
+            EXPORT
+        </button>
+        <button class="btn" id="settingsBtn" title="Settings (Ctrl+,)">
+            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42"/></svg>
+            CONFIG
+        </button>
+        <button class="btn" id="auditBtn" title="Audit trail">
+            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+            AUDIT
+        </button>
+        <button class="btn btn-danger" id="logoutBtn" title="Logout">
+            <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6"/></svg>
+            EXIT
+        </button>
+        <button id="themeBtn" class="theme-toggle dark" title="Toggle theme" aria-label="Toggle dark/light mode"></button>
+    </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     STATUS BAR
+══════════════════════════════════════════ -->
+<div class="statusbar" role="status" aria-live="polite">
+    <div class="sb-seg">
+        <div class="sb-dot g" id="connDot"></div>
+        <span class="sb-lbl">STATUS</span>
+        <span id="connectionStatus">INITIALIZING</span>
+    </div>
+    <div class="sb-seg"><span class="sb-lbl">SYS</span><span class="sb-val" id="sysTime">--:--:--</span></div>
+    <div class="sb-seg"><span class="sb-lbl">TOTAL</span><span class="sb-val" id="sbTotal">0</span></div>
+    <div class="sb-seg"><span class="sb-lbl">THREATS</span><span class="sb-val r" id="sbThreats">0</span></div>
+    <div class="sb-seg"><span class="sb-lbl">RATE</span><span class="sb-val t" id="sbRate">0.0%</span></div>
+    <div class="sb-seg"><span class="sb-lbl">SESSION</span><span class="sb-val i" id="sbSession">--</span></div>
+    <div class="sb-seg" style="margin-left:auto;border-left:1px solid rgba(109,141,255,.12);border-right:none">
+        <span class="sb-lbl">ENGINE</span>
+        <span class="sb-val" style="color:var(--gold)">ISOLATION FOREST · ML ACTIVE</span>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECURITY BAR
+══════════════════════════════════════════ -->
+<div class="sec-bar">
+    <div class="sec-bar-l">
+        <div class="sec-item"><span class="ic">▪</span>CSP ACTIVE</div>
+        <div class="sec-item"><span class="ic">▪</span>XSS GUARD</div>
+        <div class="sec-item"><span class="ic">▪</span>CLICKJACK DENY</div>
+        <div class="sec-item"><span class="ic">▪</span>INPUT SANITIZED</div>
+        <div class="sec-item"><span class="ic">▪</span>RATE LIMITED</div>
+        <div class="sec-item"><span class="ic">▪</span>AES-256 ENCRYPT</div>
+        <div class="sec-item"><span class="ic">▪</span>CSRF TOKEN VALID</div>
+        <div class="sec-item"><span class="ic">▪</span>SAME-ORIGIN</div>
+        <div class="sec-item"><span class="ic">▪</span>SRI VERIFIED</div>
+    </div>
+    <div class="sec-sess">SESSION: <span id="sessionDisplay">INITIALIZING</span></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<main class="main" role="main">
+
+    <!-- ── TELEMETRY CARDS ── -->
+    <section aria-label="System metrics">
+        <div class="sh">
+            <svg class="sh-icon" viewBox="0 0 20 20" fill="none" stroke="var(--gold)" stroke-width="1.5"><polyline points="2,14 6,8 10,11 14,4 18,9"/></svg>
+            <div class="sh-title">Telemetry Overview</div>
+            <div class="sh-tag">LIVE</div>
+            <div class="sh-line"></div>
+        </div>
+        <div class="cards">
+            <div class="card">
+                <div class="card-ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--gold)" stroke-width="1.5"><polyline points="2,14 6,8 10,11 14,4 18,9"/></svg></div>
+                <div class="card-lbl">Total Requests</div>
+                <div class="card-val" id="totalReq">0</div>
+                <div class="card-sub">Processed this session</div>
+                <div class="card-bar"><div class="card-bar-fill" id="barTotal" style="width:0%"></div></div>
+            </div>
+            <div class="card teal">
+                <div class="card-ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--teal)" stroke-width="1.5"><polyline points="2,14 7,8 12,11 17,4"/><circle cx="17" cy="4" r="2" fill="var(--teal)"/></svg></div>
+                <div class="card-lbl">Normal Traffic</div>
+                <div class="card-val" id="normalReq">0</div>
+                <div class="card-sub">Clean requests</div>
+                <div class="card-bar"><div class="card-bar-fill" id="barNormal" style="width:0%"></div></div>
+            </div>
+            <div class="card danger">
+                <div class="card-ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--red)" stroke-width="1.5"><polygon points="10,2 18,18 2,18"/><line x1="10" y1="8" x2="10" y2="13"/><circle cx="10" cy="15.5" r="0.8" fill="var(--red)"/></svg></div>
+                <div class="card-lbl">Anomalies</div>
+                <div class="card-val" id="anomalyReq">0</div>
+                <div class="card-sub">Threats detected</div>
+                <div class="card-bar"><div class="card-bar-fill" id="barAnomaly" style="width:0%"></div></div>
+            </div>
+            <div class="card caution">
+                <div class="card-ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--amber)" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4.5l3 2"/></svg></div>
+                <div class="card-lbl">Detection Rate</div>
+                <div class="card-val" id="detectionRate">0%</div>
+                <div class="card-sub">Anomaly ratio</div>
+                <div class="card-bar"><div class="card-bar-fill" id="barRate" style="width:0%"></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── SECURITY POSTURE ── -->
+    <section aria-label="Security posture">
+        <div class="sh">
+            <svg class="sh-icon" viewBox="0 0 20 20" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M10 2l6 3v5c0 4-3 7-6 8C7 17 4 14 4 10V5z"/></svg>
+            <div class="sh-title">Security Posture</div>
+            <div class="sh-tag">LIVE</div>
+            <div class="sh-line"></div>
+        </div>
+        <div class="sec-overview">
+            <div class="sec-tile ok" id="st-csp-tile">
+                <div class="sec-tile-ico"><svg viewBox="0 0 20 20"><path d="M10 2l6 3v5c0 4-3 7-6 8C7 17 4 14 4 10V5z"/></svg></div>
+                <div><div class="sec-tile-name">Content Security</div><div class="sec-tile-val">CSP + SRI ACTIVE</div></div>
+                <span class="sec-tile-badge">OK</span>
+            </div>
+            <div class="sec-tile ok" id="st-enc-tile">
+                <div class="sec-tile-ico"><svg viewBox="0 0 20 20"><rect x="5" y="9" width="10" height="8" rx="1"/><path d="M8 9V7a2 2 0 014 0v2"/></svg></div>
+                <div><div class="sec-tile-name">Encryption</div><div class="sec-tile-val">AES-256 ACTIVE</div></div>
+                <span class="sec-tile-badge">OK</span>
+            </div>
+            <div class="sec-tile ok" id="st-model-tile">
+                <div class="sec-tile-ico"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2"/></svg></div>
+                <div><div class="sec-tile-name">ML Engine</div><div class="sec-tile-val" id="st-model">Isolation Forest</div></div>
+                <span class="sec-tile-badge">OK</span>
+            </div>
+            <div class="sec-tile warn" id="st-sess-tile">
+                <div class="sec-tile-ico"><svg viewBox="0 0 20 20"><circle cx="10" cy="7" r="3"/><path d="M4 18v-2a6 6 0 0112 0v2"/></svg></div>
+                <div><div class="sec-tile-name">Session</div><div class="sec-tile-val" id="st-sess-val">Viewer</div></div>
+                <span class="sec-tile-badge" id="st-sess-badge">ANON</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── URL SCANNER ── -->
+    <section aria-label="URL threat scanner">
+        <div class="sh">
+            <svg class="sh-icon" viewBox="0 0 20 20" fill="none" stroke="var(--gold)" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+            <div class="sh-title">URL Threat Scanner</div>
+            <div class="sh-tag">MANUAL CHECK</div>
+            <div class="sh-line"></div>
+        </div>
+        <div class="scanner-panel">
+            <div class="scanner-top">
+                <div class="scanner-input-wrap">
+                    <svg class="scanner-prefix-ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+                    <select id="scanMethod" class="scanner-method">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                    <input type="text" id="scanUrl" class="scanner-url-input"
+                        placeholder="Enter URL or path — e.g. /api/users?id=1 OR 1=1"
+                        autocomplete="off" spellcheck="false" maxlength="500"
+                        aria-label="URL to scan" />
+                    <button class="scanner-btn" id="scanBtn">
+                        <svg style="width:13px;height:13px;flex-shrink:0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+                        SCAN
+                    </button>
+                </div>
+                <div class="scanner-hints">
+                    <span class="hint-chip" data-url="/api/data?id=1 OR 1=1">SQL Injection</span>
+                    <span class="hint-chip" data-url="/page?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E">XSS</span>
+                    <span class="hint-chip" data-url="/download?file=../../etc/passwd">Dir Traversal</span>
+                    <span class="hint-chip" data-url="/ping?host=127.0.0.1;ls%20-la">Cmd Injection</span>
+                    <span class="hint-chip safe" data-url="/api/v1/users">Safe Request</span>
+                </div>
+            </div>
+            <div id="scanResult" style="display:none">
+                <div id="scanVerdict" style="display:flex;align-items:center;gap:16px;padding:18px 24px;background:rgba(5,7,13,.45);border-top:1px solid var(--bdr);flex-wrap:wrap;">
+                    <div id="verdictIcon" style="width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:2px solid;"></div>
+                    <div style="flex:1;min-width:200px;">
+                        <div id="verdictStatus"  style="font-family:var(--ff-disp);font-size:22px;letter-spacing:3px;text-transform:uppercase;line-height:1;">ANALYZING</div>
+                        <div id="verdictDetail"  style="font-family:var(--ff-mono);font-size:10px;color:var(--txt-lo);letter-spacing:1.5px;margin-top:4px;text-transform:uppercase;"></div>
+                    </div>
+                    <div id="verdictConf" style="font-family:var(--ff-disp);font-size:42px;letter-spacing:2px;text-align:right;flex-shrink:0;"></div>
+                </div>
+                <div id="attackExplainer" style="display:none;padding:20px 24px;border-top:1px solid rgba(255,77,95,.18);background:rgba(255,77,95,.03);">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <div id="explainerTitle" style="font-family:var(--ff-disp);font-size:18px;letter-spacing:3px;color:var(--red);text-transform:uppercase;"></div>
+                        <div id="explainerRisk"  style="padding:3px 10px;font-family:var(--ff-mono);font-size:9px;font-weight:700;letter-spacing:2px;border:1px solid rgba(255,77,95,.4);border-radius:2px;color:var(--red);background:rgba(255,77,95,.08);text-transform:uppercase;"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+                        <div style="background:rgba(5,7,13,.55);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;"><div style="font-family:var(--ff-mono);font-size:8px;letter-spacing:2px;color:var(--txt-lo);text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);">WHAT IT IS</div><div id="explainerWhat" style="font-family:var(--ff-body);font-size:12px;color:var(--txt-mid);line-height:1.6;"></div></div>
+                        <div style="background:rgba(5,7,13,.55);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;"><div style="font-family:var(--ff-mono);font-size:8px;letter-spacing:2px;color:var(--txt-lo);text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);">HOW IT WORKS</div><div id="explainerHow" style="font-family:var(--ff-body);font-size:12px;color:var(--txt-mid);line-height:1.6;"></div></div>
+                        <div style="background:rgba(5,7,13,.55);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;"><div style="font-family:var(--ff-mono);font-size:8px;letter-spacing:2px;color:var(--txt-lo);text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);">POTENTIAL IMPACT</div><div id="explainerImpact" style="font-family:var(--ff-body);font-size:12px;color:var(--txt-mid);line-height:1.6;"></div></div>
+                        <div style="background:rgba(5,7,13,.55);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;"><div style="font-family:var(--ff-mono);font-size:8px;letter-spacing:2px;color:var(--txt-lo);text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);">MITIGATION</div><div id="explainerFix" style="font-family:var(--ff-body);font-size:12px;color:var(--txt-mid);line-height:1.6;"></div></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,77,95,.06);border:1px solid rgba(255,77,95,.20);border-radius:var(--r);flex-wrap:wrap;">
+                        <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;flex-shrink:0;">DETECTED PATTERN</span>
+                        <code id="pmCode" style="font-family:var(--ff-mono);font-size:11px;color:var(--amber);word-break:break-all;background:rgba(255,190,85,.08);border:1px solid rgba(255,190,85,.2);border-radius:2px;padding:2px 8px;"></code>
+                    </div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;border-top:1px solid var(--bdr);background:rgba(5,7,13,.34);">
+                    <div style="display:flex;align-items:center;gap:8px;padding:9px 18px;border-right:1px solid var(--bdr);"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:1.5px;color:var(--txt-lo);text-transform:uppercase;">SCANNED URL</span><code id="smUrl" style="font-family:var(--ff-mono);font-size:11px;color:var(--gold);word-break:break-all;"></code></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:9px 18px;border-right:1px solid var(--bdr);"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:1.5px;color:var(--txt-lo);text-transform:uppercase;">METHOD</span><span id="smMethod" style="font-family:var(--ff-mono);font-size:11px;color:var(--gold);"></span></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:9px 18px;border-right:1px solid var(--bdr);"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:1.5px;color:var(--txt-lo);text-transform:uppercase;">TIMESTAMP</span><span id="smTime" style="font-family:var(--ff-mono);font-size:11px;color:var(--gold);"></span></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:9px 18px;"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:1.5px;color:var(--txt-lo);text-transform:uppercase;">ENGINE</span><span id="smEngine" style="font-family:var(--ff-mono);font-size:11px;color:var(--gold);"></span></div>
+                </div>
+            </div>
+            <div id="scanLoading" style="display:none;align-items:center;gap:14px;padding:22px 24px;border-top:1px solid var(--bdr);font-family:var(--ff-mono);font-size:11px;color:var(--txt-lo);letter-spacing:2px;text-transform:uppercase;">
+                <div style="flex:1;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:beam-sweep 1.2s linear infinite;border-radius:1px;"></div>
+                <span>Analyzing request pattern...</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── CHARTS ── -->
+    <section aria-label="Signal analysis">
+        <div class="sh">
+            <svg class="sh-icon" viewBox="0 0 20 20" fill="none" stroke="var(--gold)" stroke-width="1.5"><polyline points="2,14 6,8 10,11 14,4 18,9"/></svg>
+            <div class="sh-title">Signal Analysis</div>
+            <div class="sh-tag">CHARTS</div>
+            <div class="sh-line"></div>
+        </div>
+        <div class="charts">
+            <div class="panel">
+                <div class="panel-hdr">
+                    <div class="panel-title"><span>Traffic</span> Timeline</div>
+                    <div class="chart-toggle">
+                        <button class="ct-btn active" data-chart="traffic" data-type="line">LINE</button>
+                        <button class="ct-btn"        data-chart="traffic" data-type="bar">BAR</button>
+                    </div>
+                </div>
+                <canvas id="trafficChart"></canvas>
+            </div>
+            <div class="panel">
+                <div class="panel-hdr">
+                    <div class="panel-title"><span>Attack</span> Distribution</div>
+                    <div class="chart-toggle">
+                        <button class="ct-btn active" data-chart="attack" data-type="doughnut">RING</button>
+                        <button class="ct-btn"        data-chart="attack" data-type="pie">PIE</button>
+                    </div>
+                </div>
+                <canvas id="attackChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── FILTERS ── -->
+    <div class="filters" role="search" aria-label="Log filters">
+        <div class="search-wrap">
+            <svg class="search-ico" viewBox="0 0 16 16"><circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 9.5l4 4" stroke="currentColor" stroke-width="1.5"/></svg>
+            <input type="text" id="searchInput" class="search-box"
+                placeholder="search url, method, attack type..."
+                autocomplete="off" spellcheck="false"
+                autocorrect="off" autocapitalize="off"
+                aria-label="Search logs" maxlength="200" />
+        </div>
+        <div class="sev-filters" role="group" aria-label="Severity filters">
+            <button class="sev-btn active" data-severity="all">ALL</button>
+            <button class="sev-btn"        data-severity="normal">CLEAN</button>
+            <button class="sev-btn"        data-severity="critical">CRITICAL</button>
+            <button class="sev-btn"        data-severity="high">HIGH CONF</button>
+        </div>
+    </div>
+
+    <!-- ── LIVE LOG TABLE ── -->
+    <section class="log-panel" aria-label="Live request logs">
+        <div class="log-hdr">
+            <div class="log-title">
+                <svg style="width:18px;height:18px;flex-shrink:0" viewBox="0 0 20 20" fill="none" stroke="var(--gold)" stroke-width="1.5"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M6 7h8M6 10h8M6 13h5"/></svg>
+                Live Request Feed
+                <span class="live-pip">LIVE</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-teal"   id="refreshBtn">
+                    <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 112.5 8"/><path d="M13.5 3v5h-5"/></svg>
+                    REFRESH
+                </button>
+                <button class="btn btn-danger" id="clearBtn">
+                    <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 9h4l1-9"/></svg>
+                    CLEAR
+                </button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table role="table" aria-label="Request logs">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Method</th>
+                        <th>URL / Path</th>
+                        <th>Detection</th>
+                        <th>Conf %</th>
+                    </tr>
+                </thead>
+                <tbody id="logTable">
+                    <tr><td colspan="5" class="empty-state"><div class="empty-lbl">Awaiting traffic data...</div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════
+     SETTINGS MODAL
+══════════════════════════════════════════ -->
+<div id="settingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
+    <div class="modal-box">
+        <div class="modal-hdr" id="settingsTitle">
+            <svg style="width:16px;height:16px" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+            Configuration
+        </div>
+        <div class="modal-body">
+            <div class="set-row"><div><div class="set-lbl">Auto-Refresh Feed</div><div class="set-sub">POLL INTERVAL: 3 SECONDS</div></div><label class="tgl"><input type="checkbox" id="autoRefresh" checked><span class="sl"></span></label></div>
+            <div class="set-row"><div><div class="set-lbl">Audible Threat Alerts</div><div class="set-sub">CHIME ON CRITICAL DETECTION</div></div><label class="tgl"><input type="checkbox" id="soundAlerts" checked><span class="sl"></span></label></div>
+            <div class="set-row"><div><div class="set-lbl">Email Spike Alerts</div><div class="set-sub">REQUIRES BACKEND SMTP CONFIG</div></div><label class="tgl"><input type="checkbox" id="emailAlerts"><span class="sl"></span></label></div>
+            <div class="set-row"><div><div class="set-lbl">Encrypt Stored Data</div><div class="set-sub">AES-256 LOCALSTORAGE ENCRYPTION</div></div><label class="tgl"><input type="checkbox" id="dataEncryption" checked><span class="sl"></span></label></div>
+            <div class="set-row"><div><div class="set-lbl">Session Timeout (10 min)</div><div class="set-sub">AUTO-LOGOUT ON INACTIVITY</div></div><label class="tgl"><input type="checkbox" id="sessionTimeout" checked><span class="sl"></span></label></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn"             onclick="closeModal('settingsModal')">CANCEL</button>
+            <button class="btn btn-primary" onclick="saveSettings()">SAVE CONFIG</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     AUDIT MODAL
+══════════════════════════════════════════ -->
+<div id="auditModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="auditTitle" aria-hidden="true">
+    <div class="modal-box wide">
+        <div class="modal-hdr" id="auditTitle">
+            <svg style="width:16px;height:16px" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+            Audit Trail
+        </div>
+        <div class="modal-body" style="max-height:400px;overflow-y:auto">
+            <table style="width:100%">
+                <thead><tr><th>Timestamp</th><th>Action</th><th>Operator</th></tr></thead>
+                <tbody id="auditBody">
+                    <tr><td colspan="3" class="empty-state" style="padding:20px;">No audit entries yet...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-foot">
+            <button class="btn"             onclick="closeModal('auditModal')">CLOSE</button>
+            <button class="btn btn-primary" id="exportAuditBtn">
+                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
+                EXPORT CSV
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TOASTS + SHORTCUT HINT
+══════════════════════════════════════════ -->
+<div class="toast-container" id="toastContainer" role="region" aria-live="assertive" aria-label="Alerts"></div>
+<div class="shortcut-hint" id="shortcutHint" title="Press ? for keyboard shortcuts">? SHORTCUTS</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
