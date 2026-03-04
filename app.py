@@ -77,7 +77,7 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
     ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "false").lower() == "true"
-    FRONTEND_DIR  = Path(__file__).parent / "frontend"
+    FRONTEND_DIR  = Path(__file__).parent
 
 
 # ==================== LOGGING ====================
